@@ -97,10 +97,10 @@
           class="elevation-1"
         >
           <template v-slot:top>
-              <v-toolbar flat>
-                <v-toolbar-title>Perbedaan total antara Rekap dan Data</v-toolbar-title>
-              </v-toolbar>
-            </template>
+            <v-toolbar flat>
+              <v-toolbar-title>Perbedaan total antara Rekap dan Data</v-toolbar-title>
+            </v-toolbar>
+          </template>
           <template v-slot:item.rekap="{ item }">
             {{ item.rekap.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") }}
           </template>
