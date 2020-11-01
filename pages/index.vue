@@ -177,6 +177,8 @@ export default {
       const diff = []
       const harga = []
       const harga2 = []
+      this.totals = 0
+      this.totals2 = 0
 
       for (const key in this.fixData) {
         if (this.fixData2[key]) {
