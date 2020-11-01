@@ -1,102 +1,115 @@
 <template>
   <div>
-    <v-row>
-      <v-col style="margin-left: 25px;" cols="1">
-        Rekap:
-      </v-col>
-      <v-col>
-        <v-file-input
-          v-model="csvFile"
-          accept="text/csv"
-          label="File input"
-        />
-      </v-col>
-      <v-col>
+    <v-container>
+      <v-row>
+        <v-col>
+          <v-card style="padding: 10px;">
+            <p><b>Rekap:</b></p>
+            <v-file-input
+              v-model="csvFile"
+              accept="text/csv"
+              outlined
+              dense
+              label="File input"
+            />
+            <v-btn
+              elevation="2"
+              @click="submitCsv"
+            >
+              Submit Rekap
+            </v-btn>
+          </v-card>
+        </v-col>
+        <v-col>
+          <v-card style="padding: 10px;">
+            <p><b>Data:</b></p>
+            <v-file-input
+              v-model="anotherCsv"
+              outlined
+              dense
+              accept="text/csv"
+              label="File input"
+            />
+            <v-btn
+              elevation="2"
+              @click="submitAnotherCsv"
+            >
+              Submit Data
+            </v-btn>
+          </v-card>
+        </v-col>
+      </v-row>
+      <br>
+      <div class="d-flex justify-center">
         <v-btn
-          elevation="2"
-          @click="submitCsv"
+          color="primary"
+          :disabled="Object.keys(fixData2).length === 0 || Object.keys(fixData).length === 0"
+          @click="comparing"
         >
-          Submit
+          Compare
         </v-btn>
-      </v-col>
-    </v-row>
-    <br>
-    <v-row>
-      <v-col style="margin-left: 25px;" cols="1">
-        Data:
-      </v-col>
-      <v-col>
-        <v-file-input
-          v-model="anotherCsv"
-          accept="text/csv"
-          label="File input"
-        />
-      </v-col>
-      <v-col>
-        <v-btn
-          elevation="2"
-          @click="submitAnotherCsv"
-        >
-          Submit
-        </v-btn>
-      </v-col>
-    </v-row>
-    <br>
-    <br>
-    <v-btn
-      :disabled="Object.keys(fixData2).length === 0 || Object.keys(fixData).length === 0"
-      @click="comparing"
-    >
-      Compare
-    </v-btn>
-    <br>
-    <v-row>
-      <v-col>
-        <b>Rekap yang tidak ada di Data</b>
+      </div>
+      <br>
+      <br>
+      <v-row>
+        <v-col>
+          <v-data-table
+            :headers="headers"
+            :items="result"
+            class="elevation-1"
+          >
+            <template v-slot:top>
+              <v-toolbar flat>
+                <v-toolbar-title>Rekap yang tidak ada di Data</v-toolbar-title>
+              </v-toolbar>
+            </template>
+            <template v-slot:item.total="{ item }">
+              {{ item.total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") }}
+            </template>
+          </v-data-table>
+          <br>
+          Total : Rp. {{ totals.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") }}
+        </v-col>
+        <v-col>
+          <v-data-table
+            :headers="headers"
+            :items="result2"
+            class="elevation-1"
+          >
+            <template v-slot:top>
+              <v-toolbar flat>
+                <v-toolbar-title>Data yang tidak ada di Rekap</v-toolbar-title>
+              </v-toolbar>
+            </template>
+            <template v-slot:item.total="{ item }">
+              {{ item.total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") }}
+            </template>
+          </v-data-table>
+          <br>
+          Total : Rp. {{ totals2.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") }}
+        </v-col>
+      </v-row>
+      <br>
+      <div>
         <v-data-table
-          :headers="headers"
-          :items="result"
+          :headers="headers2"
+          :items="diffHarga"
           class="elevation-1"
         >
-          <template v-slot:item.total="{ item }">
-            {{ item.total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") }}
+          <template v-slot:top>
+              <v-toolbar flat>
+                <v-toolbar-title>Perbedaan total antara Rekap dan Data</v-toolbar-title>
+              </v-toolbar>
+            </template>
+          <template v-slot:item.rekap="{ item }">
+            {{ item.rekap.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") }}
+          </template>
+          <template v-slot:item.data="{ item }">
+            {{ item.data.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") }}
           </template>
         </v-data-table>
-        <br>
-        Total : Rp. {{ totals.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") }}
-      </v-col>
-      <v-col>
-        <b>Data yang tidak ada di Rekap</b>
-        <v-data-table
-          :headers="headers"
-          :items="result2"
-          class="elevation-1"
-        >
-          <template v-slot:item.total="{ item }">
-            {{ item.total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") }}
-          </template>
-        </v-data-table>
-        <br>
-        Total : Rp. {{ totals2.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") }}
-      </v-col>
-    </v-row>
-    <br>
-    <br>
-    <b>Perbedaan total antara Rekap dan Data</b>
-    <div>
-      <v-data-table
-        :headers="headers2"
-        :items="diffHarga"
-        class="elevation-1"
-      >
-        <template v-slot:item.rekap="{ item }">
-          {{ item.rekap.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") }}
-        </template>
-        <template v-slot:item.data="{ item }">
-          {{ item.data.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") }}
-        </template>
-      </v-data-table>
-    </div>
+      </div>
+    </v-container>
     <v-dialog
       v-model="dialog"
       width="500"
