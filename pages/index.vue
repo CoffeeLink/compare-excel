@@ -7,17 +7,19 @@
             <p><b>Rekap:</b></p>
             <v-file-input
               v-model="csvFile"
-              accept="text/csv"
+              :accept="sheetJSFT"
               outlined
               dense
               label="File input"
             />
-            <v-btn
-              elevation="2"
-              @click="submitCsv"
-            >
-              Submit Rekap
-            </v-btn>
+            <div class="d-flex justify-center">
+              <v-btn
+                elevation="2"
+                @click="submitCsv"
+              >
+                Submit Rekap
+              </v-btn>
+            </div>
           </v-card>
         </v-col>
         <v-col>
@@ -27,15 +29,17 @@
               v-model="anotherCsv"
               outlined
               dense
-              accept="text/csv"
+              :accept="sheetJSFT"
               label="File input"
             />
-            <v-btn
-              elevation="2"
-              @click="submitAnotherCsv"
-            >
-              Submit Data
-            </v-btn>
+            <div class="d-flex justify-center">
+              <v-btn
+                elevation="2"
+                @click="submitAnotherCsv"
+              >
+                Submit Data
+              </v-btn>
+            </div>
           </v-card>
         </v-col>
       </v-row>
@@ -49,7 +53,6 @@
           Compare
         </v-btn>
       </div>
-      <br>
       <br>
       <v-row>
         <v-col>
@@ -121,11 +124,7 @@
 
         <v-card-text>
           <br>
-          - file harus berextensi .csv
-          <br>
-          - format file .csv untuk rekap harus memiliki header NO, NAMA, TANGGAL, NO. BUKTI, NAMA TARIP, JUMLAH
-          <br>
-          - format file .csv untuk data harus memiliki header REGBILL, NAMA, Grand Total
+          - file hanya tabel saja, tanpa ada baris total / grand total
         </v-card-text>
 
         <v-divider />
@@ -146,7 +145,7 @@
 </template>
 
 <script>
-import Papa from 'papaparse'
+import XLSX from 'xlsx'
 
 export default {
   data: () => ({
@@ -157,14 +156,17 @@ export default {
     result: [],
     result2: [],
     headers: [
+      { text: 'NAMA', value: 'nama' },
       { text: 'REGBILL', value: 'regbill' },
       { text: 'TOTAL', value: 'total' }
     ],
     headers2: [
       { text: 'REGBILL', value: 'regbill' },
+      { text: 'NAMA', value: 'nama' },
       { text: 'Total Rekap', value: 'rekap' },
       { text: 'Total Data', value: 'data' }
     ],
+    sheetJSFT: ['xlsx', 'xlsb', 'xlsm', 'xls', 'xml', 'csv', 'txt', 'ods', 'fods', 'uos', 'sylk', 'dif', 'dbf', 'prn', 'qpw', '123', 'wb*', 'wq*', 'html', 'htm'].map((x) => { return '.' + x }).join(','),
     totals: 0,
     totals2: 0,
     diffHarga: [],
@@ -186,6 +188,7 @@ export default {
           if (this.fixData[key].total !== this.fixData2[key].total) {
             diff.push({
               regbill: key,
+              nama: this.fixData[key].nama,
               rekap: this.fixData[key].total,
               data: this.fixData2[key].total
             })
@@ -206,6 +209,7 @@ export default {
       for (const key in status) {
         if (!status[key]) {
           harga.push({
+            nama: this.fixData[key].nama,
             regbill: key,
             total: this.fixData[key].total
           })
@@ -216,6 +220,7 @@ export default {
       for (const key in status2) {
         if (!status2[key]) {
           harga2.push({
+            nama: this.fixData2[key].nama,
             regbill: key,
             total: this.fixData2[key].total
           })
@@ -227,75 +232,116 @@ export default {
       this.result2 = [...harga2]
     },
     submitAnotherCsv () {
-      const dataFix = []
-      const objectFix = {}
-      Papa.parse(this.anotherCsv, {
-        header: true,
-        transformHeader: (h) => {
-          return h.trim()
-        },
-        step: (row) => {
-          const { data } = row
-          dataFix.push(data)
-          const total = parseInt(data['Grand Total'].split(',').join(''))
-          objectFix[data.REGBILL] = {
-            total
+      const objFix = {}
+      const files = this.anotherCsv
+      if (files) {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          const bstr = e.target.result
+          const wb = XLSX.read(bstr, { type: 'binary' })
+          const wsname = wb.SheetNames[0]
+          const ws = wb.Sheets[wsname]
+          const data = XLSX.utils.sheet_to_json(ws, { header: 1 })
+          const fixData = []
+          let i = 0
+          const header = {}
+          while (data.length > i) {
+            if (i === 0) {
+              for (let j = 0; j < data[i].length; j++) {
+                header[j] = data[i][j]
+              }
+            } else {
+              const tempObj = {}
+              for (let j = 0; j < Object.keys(header).length; j++) {
+                tempObj[header[j]] = data[i][j]
+              }
+              fixData.push(tempObj)
+            }
+            i++
           }
-        },
-        complete: () => {
-          this.fixData2 = { ...objectFix }
+          let j = 0
+          while (j < fixData.length) {
+            objFix[fixData[j].REGBILL] = {
+              nama: fixData[j].NAMA,
+              total: fixData[j]['Grand Total']
+            }
+            j++
+          }
+          this.fixData2 = { ...objFix }
         }
-      })
+        reader.readAsBinaryString(files)
+      }
     },
     submitCsv () {
-      const dataFix = []
       const objectFix = {}
-      Papa.parse(this.csvFile, {
-        header: true,
-        newline: '\\n',
-        delimiter: ',',
-        dynamicTyping: true,
-        transformHeader: (h) => {
-          return h.trim()
-        },
-        step: (row) => {
-          const { data } = row
-          if (data.NO && data.NO !== ' ') {
-            dataFix.push({
-              NO: parseInt(data.NO),
-              NAMA: data.NAMA.trim(),
-              TANGGAL: data.TANGGAL.trim(),
-              'NO. BUKTI': data['NO. BUKTI'].trim(),
-              'NAMA TARIP': data['NAMA TARIP'].trim(),
-              JUMLAH: parseInt(data.JUMLAH.split(',').join(''))
-            })
-          } else {
-            dataFix.push({
-              NO: dataFix[dataFix.length - 1].NO,
-              NAMA: dataFix[dataFix.length - 1].NAMA,
-              TANGGAL: dataFix[dataFix.length - 1].TANGGAL,
-              'NO. BUKTI': dataFix[dataFix.length - 1]['NO. BUKTI'],
-              'NAMA TARIP': data['NAMA TARIP'].trim(),
-              JUMLAH: parseInt(data.JUMLAH.split(',').join(''))
-            })
-          }
-        },
-        complete: (results) => {
+      const dataFix = []
+      const files = this.csvFile
+      if (files) {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          const bstr = e.target.result
+          const wb = XLSX.read(bstr, { type: 'binary' })
+          const wsname = wb.SheetNames[0]
+          const ws = wb.Sheets[wsname]
+          const data = XLSX.utils.sheet_to_json(ws, { header: 1 })
+          const fixData = []
           let i = 0
-          while (dataFix.length > i) {
-            if (objectFix[dataFix[i]['NO. BUKTI']]) {
-              objectFix[dataFix[i]['NO. BUKTI']].total = objectFix[dataFix[i]['NO. BUKTI']].total + dataFix[i].JUMLAH
+          const header = {}
+          while (data.length > i) {
+            if (i === 0) {
+              for (let j = 0; j < data[i].length; j++) {
+                header[j] = data[i][j]
+              }
             } else {
-              objectFix[dataFix[i]['NO. BUKTI']] = {
-                total: dataFix[i].JUMLAH
+              const tempObj = {}
+              for (let j = 0; j < Object.keys(header).length; j++) {
+                tempObj[header[j]] = data[i][j] || null
+              }
+              fixData.push(tempObj)
+            }
+            i++
+          }
+
+          let j = 0
+          while (j < fixData.length) {
+            if (fixData[j].NO && fixData[j].NO !== ' ') {
+              dataFix.push({
+                NO: parseInt(fixData[j].NO),
+                NAMA: fixData[j].NAMA.trim(),
+                TANGGAL: fixData[j].TANGGAL,
+                'NO. BUKTI': fixData[j]['NO. BUKTI'],
+                'NAMA TARIP': fixData[j]['NAMA TARIP'],
+                JUMLAH: fixData[j].JUMLAH
+              })
+            } else if (fixData[j].JUMLAH || fixData[j]['NAMA TARIP']) {
+              dataFix.push({
+                NO: dataFix[dataFix.length - 1].NO,
+                NAMA: dataFix[dataFix.length - 1].NAMA,
+                TANGGAL: dataFix[dataFix.length - 1].TANGGAL,
+                'NO. BUKTI': dataFix[dataFix.length - 1]['NO. BUKTI'],
+                'NAMA TARIP': fixData[j]['NAMA TARIP'],
+                JUMLAH: fixData[j].JUMLAH
+              })
+            }
+            j++
+          }
+          let k = 0
+          while (dataFix.length > k) {
+            if (objectFix[dataFix[k]['NO. BUKTI']]) {
+              objectFix[dataFix[k]['NO. BUKTI']].total = objectFix[dataFix[k]['NO. BUKTI']].total + dataFix[k].JUMLAH
+            } else {
+              objectFix[dataFix[k]['NO. BUKTI']] = {
+                total: dataFix[k].JUMLAH
               }
             }
-            objectFix[dataFix[i]['NO. BUKTI']][dataFix[i]['NAMA TARIP']] = dataFix[i].JUMLAH
-            i++
+            objectFix[dataFix[k]['NO. BUKTI']].nama = dataFix[k].NAMA
+            objectFix[dataFix[k]['NO. BUKTI']][dataFix[k]['NAMA TARIP']] = dataFix[k].JUMLAH
+            k++
           }
           this.fixData = { ...objectFix }
         }
-      })
+        reader.readAsBinaryString(files)
+      }
     }
   }
 }
