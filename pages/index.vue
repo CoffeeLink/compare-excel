@@ -3,7 +3,7 @@
     <v-container>
       <v-row>
         <v-col>
-          <v-card style="padding: 10px;">
+          <v-card :style="statusSubmitRekap ? 'padding: 10px; border-color: #00cfb3; border-width: 2px;' : 'padding: 10px;'" outlined>
             <p><b>Rekap:</b></p>
             <v-file-input
               v-model="csvFile"
@@ -11,10 +11,12 @@
               outlined
               dense
               label="File input"
+              @change="changeStatusSubmitRekap"
             />
             <div class="d-flex justify-center">
               <v-btn
                 elevation="2"
+                :disabled="!csvFile"
                 @click="submitCsv"
               >
                 Submit Rekap
@@ -23,7 +25,7 @@
           </v-card>
         </v-col>
         <v-col>
-          <v-card style="padding: 10px;">
+          <v-card :style="statusSubmitData ? 'padding: 10px; border-color: #00cfb3; border-width: 2px;' : 'padding: 10px;'" outlined>
             <p><b>Data:</b></p>
             <v-file-input
               v-model="anotherCsv"
@@ -31,10 +33,12 @@
               dense
               :accept="sheetJSFT"
               label="File input"
+              @change="changeStatusSubmitData"
             />
             <div class="d-flex justify-center">
               <v-btn
                 elevation="2"
+                :disabled="!anotherCsv"
                 @click="submitAnotherCsv"
               >
                 Submit Data
@@ -56,61 +60,72 @@
       <br>
       <v-row>
         <v-col>
-          <v-data-table
-            :headers="headers"
-            :items="result"
-            class="elevation-1"
+          <v-card
+            outlined
           >
-            <template v-slot:top>
-              <v-toolbar flat>
-                <v-toolbar-title>Rekap yang tidak ada di Data</v-toolbar-title>
-              </v-toolbar>
-            </template>
-            <template v-slot:item.total="{ item }">
-              {{ item.total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") }}
-            </template>
-          </v-data-table>
-          <br>
-          Total : Rp. {{ totals.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") }}
+            <v-container>
+              <v-data-table
+                :headers="headers"
+                :items="result"
+              >
+                <template v-slot:top>
+                  <v-toolbar flat>
+                    <v-toolbar-title>Rekap yang tidak ada di Data</v-toolbar-title>
+                  </v-toolbar>
+                </template>
+                <template v-slot:item.total="{ item }">
+                  {{ item.total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") }}
+                </template>
+              </v-data-table>
+              <br>
+              Total : Rp. {{ totals.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") }}
+            </v-container>
+          </v-card>
         </v-col>
         <v-col>
-          <v-data-table
-            :headers="headers"
-            :items="result2"
-            class="elevation-1"
-          >
-            <template v-slot:top>
-              <v-toolbar flat>
-                <v-toolbar-title>Data yang tidak ada di Rekap</v-toolbar-title>
-              </v-toolbar>
-            </template>
-            <template v-slot:item.total="{ item }">
-              {{ item.total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") }}
-            </template>
-          </v-data-table>
-          <br>
-          Total : Rp. {{ totals2.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") }}
+          <v-card outlined>
+            <v-container>
+              <v-data-table
+                :headers="headers"
+                :items="result2"
+              >
+                <template v-slot:top>
+                  <v-toolbar flat>
+                    <v-toolbar-title>Data yang tidak ada di Rekap</v-toolbar-title>
+                  </v-toolbar>
+                </template>
+                <template v-slot:item.total="{ item }">
+                  {{ item.total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") }}
+                </template>
+              </v-data-table>
+              <br>
+              Total : Rp. {{ totals2.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") }}
+            </v-container>
+          </v-card>
         </v-col>
       </v-row>
       <br>
       <div>
-        <v-data-table
-          :headers="headers2"
-          :items="diffHarga"
-          class="elevation-1"
-        >
-          <template v-slot:top>
-            <v-toolbar flat>
-              <v-toolbar-title>Perbedaan total antara Rekap dan Data</v-toolbar-title>
-            </v-toolbar>
-          </template>
-          <template v-slot:item.rekap="{ item }">
-            {{ item.rekap.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") }}
-          </template>
-          <template v-slot:item.data="{ item }">
-            {{ item.data.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") }}
-          </template>
-        </v-data-table>
+        <v-card outlined>
+          <v-container>
+            <v-data-table
+              :headers="headers2"
+              :items="diffHarga"
+            >
+              <template v-slot:top>
+                <v-toolbar flat>
+                  <v-toolbar-title>Perbedaan total antara Rekap dan Data</v-toolbar-title>
+                </v-toolbar>
+              </template>
+              <template v-slot:item.rekap="{ item }">
+                {{ item.rekap.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") }}
+              </template>
+              <template v-slot:item.data="{ item }">
+                {{ item.data.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") }}
+              </template>
+            </v-data-table>
+          </v-container>
+        </v-card>
       </div>
     </v-container>
     <v-dialog
@@ -153,6 +168,8 @@ export default {
     anotherCsv: null,
     fixData: {},
     fixData2: {},
+    statusSubmitRekap: false,
+    statusSubmitData: false,
     result: [],
     result2: [],
     headers: [
@@ -172,7 +189,25 @@ export default {
     diffHarga: [],
     dialog: true
   }),
+  watch: {
+    csvFile (data) {
+      if (!data) {
+        this.statusSubmitRekap = false
+      }
+    },
+    anotherCsv (data) {
+      if (!data) {
+        this.statusSubmitData = false
+      }
+    }
+  },
   methods: {
+    changeStatusSubmitRekap () {
+      this.statusSubmitRekap = false
+    },
+    changeStatusSubmitData () {
+      this.statusSubmitData = false
+    },
     comparing () {
       const status = {}
       const status2 = {}
@@ -268,6 +303,7 @@ export default {
             j++
           }
           this.fixData2 = { ...objFix }
+          this.statusSubmitData = true
         }
         reader.readAsBinaryString(files)
       }
@@ -339,6 +375,7 @@ export default {
             k++
           }
           this.fixData = { ...objectFix }
+          this.statusSubmitRekap = true
         }
         reader.readAsBinaryString(files)
       }
